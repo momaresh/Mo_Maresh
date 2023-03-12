@@ -3,7 +3,7 @@
     session_start();
     $setTitle = 'Orders';
 
-    if (isset($_SESSION['USER_NAME']) && isset($_SESSION['GROUP_ID']) == 1):
+    if (isset($_SESSION['USER_NAME']) && $_SESSION['GROUP_ID'] == 1):
         include 'initial.php';
         $do = (isset($_GET['do']) ? $_GET['do'] : 'Manage');
 
@@ -24,32 +24,31 @@
             $stmt2->execute(array($card_id));
             $row2 = $stmt2->fetch();
                         
-
             if(($row2['amount'] + $old_price) < $total_price) {
                 echo "<script>
                         alert('Amount NOT enough');
                         window.open('orders.php', '_self');
                         </script>";
             }
-
-
-            try {
-                $stmt_c = $conn->prepare("UPDATE cards SET amount = ((amount + ?) - ?)  WHERE card_id = ?");
-                $stmt_c->execute(array($old_price, $total_price, $card_id));
-
-                $stmt_o = $conn->prepare("UPDATE orders SET total_price = ((total_price - ?) + ?)  WHERE order_id = ?");
-                $stmt_o->execute(array($old_price, $total_price, $order_id));
-
-                $stmt_oi = $conn->prepare("UPDATE order_items SET total_price = ?, quantity = ?  WHERE order_id = ? AND prod_id = ?");
-                $stmt_oi->execute(array($total_price, $quant, $order_id, $prod_id));
-
-                echo "<script>
-                    alert('Updated Successfully');
-                    window.open('orders.php', '_self');
-                    </script>";
-            }
-            catch(Exception $e) {
-                $error_up = "<div class='alert alert-danger'>" . $e->getMessage() . "</div>";
+            else {
+                try {
+                    $stmt_c = $conn->prepare("UPDATE cards SET amount = ((amount + ?) - ?)  WHERE card_id = ?");
+                    $stmt_c->execute(array($old_price, $total_price, $card_id));
+    
+                    $stmt_o = $conn->prepare("UPDATE orders SET total_price = ((total_price - ?) + ?)  WHERE order_id = ?");
+                    $stmt_o->execute(array($old_price, $total_price, $order_id));
+    
+                    $stmt_oi = $conn->prepare("UPDATE order_items SET total_price = ?, quantity = ?  WHERE order_id = ? AND prod_id = ?");
+                    $stmt_oi->execute(array($total_price, $quant, $order_id, $prod_id));
+    
+                    echo "<script>
+                        alert('Updated Successfully');
+                        window.open('orders.php', '_self');
+                        </script>";
+                }
+                catch(Exception $e) {
+                    $error_up = "<div class='alert alert-danger'>" . $e->getMessage() . "</div>";
+                }
             }
         }
 
@@ -72,25 +71,43 @@
             }
         }
 
-        if($do == "Manage") {
-            $orders_stmt = $conn->prepare('SELECT * FROM ORDERS ORDER BY ORDER_ID DESC');
-            $orders_stmt->execute();
-            
-            if($orders_stmt->rowCount() > 0):
-                $orders = $orders_stmt->fetchAll();
-            ?>
-            
+        if($do == "Manage") { ?>
+
             <h3 class="use-a-lot2 mb-2 mt-5">
                 Orders
             </h3>
+
+            <form class="search" action="" method='POST'>
+                <input type="text" name="user_name" placeholder="Search by user name" id="search">
+                <input type="submit" name="search" value="Search" id="button">
+            </form>
 
             <div class="container">
                 <a href="?do=AddOrder" class="btn btn-primary mb-2">ADD ORDER</a>
             </div>
 
             <?php
-                if(isset($error_up)) echo $error_up;
-                if(isset($error_del)) echo $error_del;
+            if(isset($error_up)) echo $error_up;
+            if(isset($error_del)) echo $error_del;
+
+            $search = ''; 
+            if(isset($_POST['search'])) {
+                $user_name = $_POST['user_name'];
+                
+                if(!empty($user_name)) {
+                    $stmt_cus = $conn->prepare("SELECT user_id FROM USERS WHERE user_name = ?");
+                    $stmt_cus->execute(array($user_name));
+                    $cus = $stmt_cus->fetch();
+
+                    $search = "WHERE user_id = $cus[user_id]";
+                }
+            }
+
+            $orders_stmt = $conn->prepare("SELECT * FROM ORDERS $search ORDER BY STATUS DESC, ORDER_ID DESC");
+            $orders_stmt->execute();
+            
+            if($orders_stmt->rowCount() > 0):
+                $orders = $orders_stmt->fetchAll();
 
                 foreach($orders as $order):
                     $stmt_cus = $conn->prepare("SELECT user_name FROM USERS WHERE user_id = ?");
@@ -208,7 +225,7 @@
             <?php
                 endforeach;
             else:
-                echo '<div class="alert alert-info mt-5" style="width: 50%; margin: auto">THE ORDERS IS EMPTY</div>';
+                echo "<div class='container text-center alert alert-info'> There is no orders for this user.....!</div>";
             endif;
         }
         elseif($do == 'AddItem') {
@@ -326,10 +343,10 @@
                 $row2 = $stmt2->fetch();
 
                 if($stmt2->rowCount() <= 0){
-                    $error = "<div class='alert alert-danger'>The card NOT found</div>";
+                    $errors['cardExists'] = "<div class='alert alert-danger'>The card NOT found</div>";
                 }
                 elseif($row2['amount'] < $total_price) {
-                    $error = "<div class='alert alert-danger'>The amount NOT enough</div>";
+                    $errors['amount'] = "<div class='alert alert-danger'>The amount NOT enough</div>";
                 }
                
                 if(empty($cus_id)) {
@@ -349,7 +366,7 @@
                     try {
                         // We don't need to insert the total price manual we had made a trigger to do that
                         $stmt3 = $conn->prepare("INSERT INTO ORDERS(user_id, card_id, loc_id, ship_id, status)
-                                                VALUES(?, ?, ?, ?, ?, ?)");
+                                                VALUES(?, ?, ?, ?, ?)");
                         $stmt3->execute(array($cus_id, $row2['card_id'], $loc_id, $ship_id, 'ordered'));
 
                         $stmt_id = $conn->prepare("SELECT MAX(order_id) FROM orders");
@@ -377,7 +394,8 @@
             <h3 class="use-a-lot2 mb-2 mt-5">ADD ORDER</h3>
                 <form class="form-row company-form" method="POST" action="?do=AddOrder">
                     <?php
-                    if(isset($error)) echo $error;
+                    if(isset($errors['cardExists'])) echo $errors['cardExists'];
+                    if(isset($errors['amount'])) echo $errors['amount'];
                     ?>
                     <div class="form-group col-md-4">
                         <label for="inputEmail4">Customer Name</label>

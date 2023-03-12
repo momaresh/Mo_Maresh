@@ -5,7 +5,7 @@
 
 
     // CHECK IF COMING FROM REQUEST
-    if($_POST['sign']):
+    if(isset($_POST['sign'])):
 
         $avatarName = $_FILES['user_image']['name'];
         $avatarSize = $_FILES['user_image']['size'];
@@ -47,11 +47,11 @@
         if(empty($email)):
             $errors['email1'] = "The email must not be <strong>empty</strong>";
         endif;
-        // Check if the email is exsits in the dadabase
+        // Check if the email is exists in the database
         if(checkUser('email', 'users', $email) > 0):
             $errors['email2'] = "The email is <strong>already exists</strong>";
         endif;
-        // Check if the user name is exsits in the dadabase
+        // Check if the user name is exists in the database
         if(checkUser('user_name', 'users', $user_name) > 0):
             $errors['user_name3'] = "The user_name is <strong>already exists</strong>";
         endif;
@@ -64,10 +64,11 @@
 
         // IF no error occur update in the database
         if(empty($errors)):
+            $avatar = 'img.png';
             if(!empty($avatarName)) {
                 $avatar = rand(1, 1000000) . '_' . $avatarName;
-                move_uploaded_file($avatarTmp, "..\docs\images\user_images\\" . $avatar);
             }
+            move_uploaded_file($avatarTmp, "..\docs\images\user_images\\" . $avatar);
 
             // create the user and change it to the main
             $stmt = $conn->prepare("INSERT INTO users (user_name, full_name, email, password, birth_date, nationality, date, image)

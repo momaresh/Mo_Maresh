@@ -9,6 +9,12 @@
         if ($do == 'Manage') { ?>
         <div class="container mt-5">
             <h3 class="use-a-lot2 mb-2">Users</h3>
+
+            <form class="search" action="" method='POST'>
+                <input type="text" name="user_name" placeholder="Search by user name" id="search">
+                <input type="submit" name="search" value="Search" id="button">
+            </form>
+
             <a href="?do=Add" class="btn btn-primary mb-3">ADD USER</a>
             <div class="table-responsive">
                 <table class="table table-bordered text-center">
@@ -33,33 +39,54 @@
                         $bind = 'AND reg_status = 0';
                     }
 
-                    $stmt = $conn->prepare("SELECT * FROM users WHERE group_id != 1 $bind"); // We will NOT display the admins in the page
-                    $stmt->execute();
-                    $rows = $stmt->fetchAll();
-                    foreach($rows as $row): ?>
-                        <tr>
-                            <td><?php echo $row['user_id']; ?></td>
-                            <td><?php echo $row['user_name']; ?></td>
-                            <td><?php echo $row['email']; ?></td>
-                            <td><?php echo $row['password']; ?></td>
-                            <td><?php echo $row['full_name']; ?></td>
-                            <td><?php echo $row['birth_date']; ?></td>
-                            <td><?php echo $row['nationality']; ?></td>
-                            <td><?php echo $row['date']; ?></td>
-                            <td><?php echo $row['last_update']; ?></td>
-                            <td>
-                                <a href="?do=Edit&userid=<?php echo $row['user_id'];?>" class="btn" style="background-color: #4eb67f">Edit</a>
-                                <a href="?do=Delete&userid=<?php echo $row['user_id'];?>" class="btn confirm" style="background-color: #ff6a00">Delete</a>
+                    $search = ''; 
+                    if(isset($_POST['search'])) {
+                        $user_name = $_POST['user_name'];
+                        if(!empty($user_name)) {
+                            $search = "AND user_name LIKE '%$user_name%'";
+                        }
+                    }
 
-                                <?php // if is not active will display the button for activate
-                                    if ($row['reg_status'] === 0):
-                                        echo "<a href='?do=Active&userid=$row[user_id]' 
-                                        class=btn style='background-color: #4eb67f'>Active</a>";
-                                    endif;
-                                ?>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
+                    $stmt = $conn->prepare("SELECT * FROM users WHERE group_id != 1 $bind $search"); // We will NOT display the admins in the page
+                    $stmt->execute();
+                    
+                    if($stmt->rowCount() > 0) {
+                        $rows = $stmt->fetchAll();
+                        foreach($rows as $row): ?>
+                            <tr>
+                                <td><?php echo $row['user_id']; ?></td>
+                                <td><?php echo $row['user_name']; ?></td>
+                                <td><?php echo $row['email']; ?></td>
+                                <td><?php echo $row['password']; ?></td>
+                                <td><?php echo $row['full_name']; ?></td>
+                                <td><?php echo $row['birth_date']; ?></td>
+                                <td><?php echo $row['nationality']; ?></td>
+                                <td><?php echo $row['date']; ?></td>
+                                <td><?php echo $row['last_update']; ?></td>
+                                <td>
+                                    <a href="?do=Edit&userid=<?php echo $row['user_id'];?>" class="btn" style="background-color: #4eb67f; margin-bottom: 5px;">Edit</a>
+                                    <a href="?do=Delete&userid=<?php echo $row['user_id'];?>" class="btn confirm" style="background-color: #ff6a00; margin-bottom: 5px;">Delete</a>
+    
+                                    <?php // if is not active will display the button for activate
+                                        if ($row['reg_status'] === 1):
+                                            echo "<a href='?do=NonActive&userid=$row[user_id]' class='btn' style='background-color: var(--main-color); color: white; margin-bottom: 5px;'>Nonactive</a>";
+                                        endif;
+                                    ?>
+                                    
+                                    <?php // if is not active will display the button for activate
+                                        if ($row['reg_status'] === 0):
+                                            echo "<a href='?do=Active&userid=$row[user_id]' 
+                                            class=btn style='background-color: #4eb67f'>Active</a>";
+                                        endif;
+                                    ?>
+                                </td>
+                            </tr>
+                        <?php endforeach;
+                    }
+                    else {
+                        echo "<div class='container text-center alert alert-info'> There is no user.....!</div>";
+                    }
+                    ?>
                 </table>
             </div>
         </div>
@@ -143,7 +170,7 @@
                             'IMAGE' => $name
                         ));
                         echo "<script>
-                            alert(" . $stmt->rowcount() . " RECORD INSERTED...!);
+                            alert('" . $stmt->rowcount() . " RECORD INSERTED...!');
                             window.open('user.php', '_self');
                             </script>";
                     }
@@ -157,6 +184,7 @@
                 endif;
             endif;
             ?>
+
             <div class='signup'>
                 <h1 class="text-center" style="color: #ff6a00; font-weight: bold;">Add User</h1>
 
@@ -258,7 +286,14 @@
                     $hash_password = md5($password);
                     $birth_date = $_POST['birth_date'];
                     $nationality = $_POST['nationality'];
-                    $role = $_POST['group'];
+                    
+                    if($_SESSION['GROUP_ID'] == 3) {
+                        $role = 3;
+                    }
+                    else {
+                        $role = $_POST['group'];
+                    }
+
                     //----------------------
                     $name = $_FILES['user_image']['name'];
                     $type = $_FILES['user_image']['type'];
@@ -351,18 +386,17 @@
                             endif;
 
                             echo "<script>
-                                alert(" . $stmt->rowcount() . " RECORD UPDATED...! );
-                                window.open('user.php?do=Edit', '_self');
+                                alert('" . $stmt->rowcount() . " RECORD UPDATED...! ');
+                                window.open('user.php?do=Edit&userid=" . $userId . "', '_self');
                                 </script>";
                         }
                         catch(Exception $e) {
                             echo "<script>
-                            alert(" . $e->getMessage() . ");
-                            window.open('user.php?do=Edit', '_self');
+                            alert('" . $e->getMessage() . "');
+                            window.open('user.php?do=Edit&userid=" . $userId . "', '_self');
                             </script>";
                         }
                         
-                        $success = "<div class='alert alert-success'>" . $stmt->rowcount() . " RECORD UPDATED...! </div>";
                     endif;
                 endif;
             ?>
@@ -437,20 +471,26 @@
                             <label>Nationality:</label>
                             <input list="nationality" name="nationality" value="<?php echo $row['nationality'] ?>" class="input">
                         </div>
-                        <div class="role">
-                            <label>Role:</label>
-                            <select style="width: 100%; height: 60%" id="card-type" name="group" required>
-                                <option value="1">Admin</option>
-                                <option value="2" selected>User</option>
-                                <option value="3">Supplier</option>
-                            </select>
-                        </div>
+                        
+                        <?php
+                        if($_SESSION['GROUP_ID'] == 1) {?>
+                            <div class="role">
+                                <label>Role:</label>
+                                <select style="width: 100%; height: 60%" id="card-type" name="group" required>
+                                    <option value="1">Admin</option>
+                                    <option value="2" selected>User</option>
+                                    <option value="3">Supplier</option>
+                                </select>
+                            </div>
+                        <?php
+                        }
+                        ?>
                         <datalist id="nationality">
                             <option value="Yemeni">
                             <option value="Saudi">
                         </datalist>
 
-                        <input class="submit" type="submit" value="Save" name='EDIT'>
+                        <input class="submit" type="submit" value="Save" name='edit'>
                     </div>
                 </form>
             </div>
@@ -461,8 +501,6 @@
             ?>
     <?php }
         elseif($do == 'Delete') {
-            echo '<h1 class="text-center" style="color: #ff6a00; font-weight: bold;">Delete User</h1>';
-            echo '<div class=container>';
             // CHECK IF THE COMING USER NAME IS NUMERIC AND STOR
             $userId = (isset($_GET['userid']) && is_numeric($_GET['userid']) ? intval($_GET['userid']) : 0);
 
@@ -474,16 +512,15 @@
                 $stmt = $conn->prepare("DELETE FROM users WHERE user_id = ?");
                 $stmt->execute(array($userId));
                 echo "<script>
-                    alert(" . $stmt->rowcount() . " RECORD DELETED...! );
+                    alert('" . $stmt->rowcount() . " RECORD DELETED...! ');
                     window.open('user.php', '_self');
                     </script>";
             else:
                 echo "<script>
-                    alert(THE USER NOT FOUND);
+                    alert('THE USER NOT FOUND');
                     window.open('user.php', '_self');
                     </script>";
             endif;
-            echo '</div>';
         }
 
         elseif($do == 'Active') {
@@ -495,7 +532,7 @@
 
             if($stmt->rowcount() <= 0):
                 echo "<script>
-                    alert(THE USER NOT FOUND);
+                    alert('THE USER NOT FOUND');
                     window.open('user.php', '_self');
                     </script>";
 
@@ -508,12 +545,45 @@
                 $stmt2->execute(array($userId));
 
                 echo "<script>
-                    alert(" . $stmt2->rowcount() . " RECORD ACTIVATED...!);
+                    alert('" . $stmt2->rowcount() . " RECORD ACTIVATED...!');
                     window.open('user.php?page=bind', '_self');
                     </script>";
             else:
                 echo "<script>
-                    alert(THE USER IS ALREADY ACTIVATE);
+                    alert('THE USER IS ALREADY ACTIVATE');
+                    window.open('user.php', '_self');
+                    </script>";
+            endif;
+        }
+
+        elseif($do == 'NonActive') {
+            $userId = (isset($_GET['userid'])) &&  is_numeric($_GET['userid']) ? intval($_GET['userid']) : 0;
+
+            $stmt = $conn->prepare("SELECT * FROM users WHERE user_id = $userId");
+            $stmt->execute();
+            $row = $stmt->fetch();
+
+            if($stmt->rowcount() <= 0):
+                echo "<script>
+                    alert('THE USER NOT FOUND');
+                    window.open('user.php', '_self');
+                    </script>";
+
+            elseif($stmt->rowcount() > 0 && $row['reg_status'] == 1):
+                $stmt2 = $conn->prepare("UPDATE users 
+                                                    SET 
+                                                        reg_status = 0
+                                                    WHERE 
+                                                        user_id = ?");
+                $stmt2->execute(array($userId));
+
+                echo "<script>
+                    alert('" . $stmt2->rowcount() . " RECORD ACTIVATED...!');
+                    window.open('user.php', '_self');
+                    </script>";
+            else:
+                echo "<script>
+                    alert('THE USER IS ALREADY Not ACTIVATE');
                     window.open('user.php', '_self');
                     </script>";
             endif;

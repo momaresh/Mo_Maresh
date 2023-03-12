@@ -56,9 +56,11 @@
     }
 
 
-    // this check if is it in the view list and also we will use it in change the color of bottom
-    $stmt_view = $conn->prepare("SELECT * FROM list WHERE user_id = ? AND prod_id = ?");
-    $stmt_view->execute(array($_SESSION['USER_ID'], $compId));
+    if(isset($_SESSION['USER_ID'])) {
+        // this check if is it in the view list and also we will use it in change the color of bottom
+        $stmt_view = $conn->prepare("SELECT * FROM list WHERE user_id = ? AND prod_id = ?");
+        $stmt_view->execute(array($_SESSION['USER_ID'], $compId));
+    }
 
 
     if (isset($_POST['AddList'])) {

@@ -149,7 +149,21 @@
                                 </select>
                             </li>
                         </ul>
-                        <input class="btn btn-primary mb-4 btn-lg pl-5 pr-5" name='check' type="submit" value="Pay">
+                        <?php
+                        $stmt_reg = $conn->prepare("SELECT reg_status FROM USERS WHERE user_name = ?");
+                        $stmt_reg->execute(array($_SESSION['USER_NAME']));
+                        $row_reg = $stmt_reg->fetch();
+
+                        if($row_reg['reg_status'] == 0) { ?>
+                            <p class="btn btn-primary mb-4 btn-lg pl-5 pr-5" style="cursor: none">Pay</p>
+                            <p>please message the admin to activate you</p>
+                            <?php
+                        }
+                        else { ?>
+                            <input class="btn btn-primary mb-4 btn-lg pl-5 pr-5" name='check' type="submit" value="Pay">
+                        <?php
+                        }
+                        ?>
                     </form>
                 </div>
             </div>

@@ -33,6 +33,7 @@
         $stmt->execute(array($v_user_name, $hash_password));
         $row = $stmt->fetch();
 
+
         if ($stmt->rowCount() > 0) {
             // IF I'M EXISTS I WILL MAKE A SESSION 
             $_SESSION['USER_NAME'] = $v_user_name; // WE ADD SESSION FOR THE USER

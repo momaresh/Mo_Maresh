@@ -85,7 +85,6 @@
                         <p class="fw-bold mb-0">Order Details</p>
                         <p class="text-muted mb-0"><span class="fw-bold me-4">Total</span> $<?php echo $order['total_price'] ?></p>
                     </div>
-
                     <div class="d-flex justify-content-between p-2">
                         <p class="text-muted mb-0">Invoice Date : <?php echo $order['order_date'] ?></p>
                         <p class="text-muted mb-0"><span class="fw-bold me-4">Number</span> <?php echo $order['order_id'] ?></p>

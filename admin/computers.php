@@ -12,13 +12,18 @@
         if($_SESSION['GROUP_ID'] == 3){
             $condition = "WHERE SUP_ID = $_SESSION[USER_ID]";
         }
-    
 
         $do = (isset($_GET['do'])) ? $_GET['do'] : 'Manage';
 
         if ($do == 'Manage') { ?>
             <div class="container mt-5">
                 <h3 class="use-a-lot2 mb-2">Computers</h3>
+
+                <form class="search" action="" method='POST'>
+                    <input type="text" name="computer_name" placeholder="Search by computer name" id="search">
+                    <input type="submit" name="search" value="Search" id="button">
+                </form>
+
                 <a href="?do=Add" class="btn btn-primary mb-2">ADD COMPUTER</a>
                 <div class="table-responsive">
                     <table class="table table-bordered text-center">
@@ -38,29 +43,51 @@
                             <th>Control</th>
                         </tr>
                         <?php 
-                        $stmt = $conn->prepare("SELECT * FROM products p JOIN computers c ON p.prod_id = c.computer_id $condition");
+
+
+                        $search = ''; 
+                        if(isset($_POST['search'])) {
+                            $computer_name = $_POST['computer_name'];
+
+                            if(!empty($computer_name) && $_SESSION['GROUP_ID'] == 3) {
+                                $search = "AND prod_name LIKE '%$computer_name%'";
+                            }
+                            elseif(!empty($computer_name) && $_SESSION['GROUP_ID'] != 3) {
+                                $search = "WHERE prod_name LIKE '%$computer_name%'";
+                            }
+                        }
+                        
+                        
+                        $stmt = $conn->prepare("SELECT * FROM products p JOIN computers c ON p.prod_id = c.computer_id $condition $search");
                         $stmt->execute();
-                        $rows = $stmt->fetchAll();
-                        foreach($rows as $row): ?>
-                            <tr >
-                                <td><?php echo $row['prod_id']; ?></td>
-                                <td><?php echo substr($row['prod_name'], 0, 50); ?></td>
-                                <td>$<?php echo $row['price']; ?></td>
-                                <td><?php echo $row['brand']; ?></td>
-                                <td><?php echo $row['color']; ?></td>
-                                <td><?php echo $row['screen_size']; ?> In</td>
-                                <td><?php echo $row['storage_size']; ?> GB</td>
-                                <td><?php echo $row['storage_type']; ?></td>
-                                <td><?php echo $row['os']; ?></td>
-                                <td><?php echo $row['ram_size']; ?> GB</td>
-                                <td><?php echo $row['graphic_brand']; ?></td>
-                                <td><?php echo $row['graphic_size']; ?> GB</td>
-                                <td>
-                                    <a href="?do=Edit&compid=<?php echo $row['computer_id'];?>" class="btn" style="background-color: #4eb67f; margin-bottom: 5px;">Edit</a>
-                                    <a href="?do=Delete&compid=<?php echo $row['computer_id'];?>" class="btn confirm" style="background-color: #ff6a00">Delete</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                        
+                        if($stmt->rowCount() > 0) {
+                            $rows = $stmt->fetchAll();
+                            foreach($rows as $row): ?>
+                                <tr >
+                                    <td><?php echo $row['prod_id']; ?></td>
+                                    <td><?php echo substr($row['prod_name'], 0, 50); ?></td>
+                                    <td>$<?php echo $row['price']; ?></td>
+                                    <td><?php echo $row['brand']; ?></td>
+                                    <td><?php echo $row['color']; ?></td>
+                                    <td><?php echo $row['screen_size']; ?> In</td>
+                                    <td><?php echo $row['storage_size']; ?> GB</td>
+                                    <td><?php echo $row['storage_type']; ?></td>
+                                    <td><?php echo $row['os']; ?></td>
+                                    <td><?php echo $row['ram_size']; ?> GB</td>
+                                    <td><?php echo $row['graphic_brand']; ?></td>
+                                    <td><?php echo $row['graphic_size']; ?> GB</td>
+                                    <td>
+                                        <a href="?do=Edit&compid=<?php echo $row['computer_id'];?>" class="btn" style="background-color: #4eb67f; margin-bottom: 5px;">Edit</a>
+                                        <a href="?do=Delete&compid=<?php echo $row['computer_id'];?>" class="btn confirm" style="background-color: #ff6a00">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach;
+                        }
+                        else {
+                            echo "<div class='container text-center alert alert-info'> There is no computer.....!</div>";
+                        }
+                        ?>
                     </table>
                 </div>
             </div>

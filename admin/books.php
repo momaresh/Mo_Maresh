@@ -5,18 +5,23 @@
     // AONLY THE ADMIN AND SUPPLIER CAN GO HERE
     if (isset($_SESSION['USER_NAME']) && ($_SESSION['GROUP_ID'] == 1 || $_SESSION['GROUP_ID'] == 3)) {
         include 'initial.php';
-
+    
         $condition = '';
         if($_SESSION['GROUP_ID'] == 3){
             $condition = "WHERE SUP_ID = $_SESSION[USER_ID]";
         }
-    
 
         $do = (isset($_GET['do'])) ? $_GET['do'] : 'Manage';
 
         if ($do == 'Manage') { ?>
             <div class="container mt-5">
             <h3 class="use-a-lot2 mb-2">Books</h3>
+
+            <form class="search" action="" method='POST'>
+                <input type="text" name="book_name" placeholder="Search by book name" id="search">
+                <input type="submit" name="search" value="Search" id="button">
+            </form>
+
             <a href="?do=Add" class="btn btn-primary mb-3">ADD BOOK</a>
                 <div class="table-responsive">
                     <table class="table table-bordered text-center">
@@ -33,37 +38,57 @@
                             <th>Inserted_Date</th>
                             <th>Control</th>
                         </tr>
-                        <?php 
-                        $stmt = $conn->prepare("SELECT * FROM products p JOIN books b ON p.prod_id = b.book_id $condition");
+                        <?php
+
+                        $search = ''; 
+                        if(isset($_POST['search'])) {
+                            $book_name = $_POST['book_name'];
+
+                            if(!empty($book_name) && $_SESSION['GROUP_ID'] == 3) {
+                                $search = "AND prod_name LIKE '%$book_name%'";
+                            }
+                            elseif(!empty($book_name) && $_SESSION['GROUP_ID'] != 3) {
+                                $search = "WHERE prod_name LIKE '%$book_name%'";
+                            }
+                        }
+
+                        $stmt = $conn->prepare("SELECT * FROM products p JOIN books b ON p.prod_id = b.book_id $condition $search");
                         $stmt->execute();
-                        $rows = $stmt->fetchAll();
-                        foreach($rows as $row): ?>
-                            <tr >
-                                <td><?php echo $row['book_id']; ?></td>
-                                <td><?php echo substr($row['prod_name'], 0, 50); ?></td>
-                                <td>$<?php echo $row['price']; ?></td>
-                                <td><?php echo $row['language']; ?></td>
-                                <td><?php echo $row['size']; ?>MB</td>
-                                <?php
-                                    $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE book_id = ?");
-                                    $stmt_cat->execute(array($row['book_id']));
-                                    $cat_rows = $stmt_cat->fetchAll();
-                                    echo "<td>";
-                                    foreach ($cat_rows as $cat_row):
-                                        echo $cat_row['category_name'] . ' '; 
-                                    endforeach;
-                                    echo "</td>";
-                                ?>
-                                <td><?php echo $row['pages']; ?></td>
-                                <td><?php echo $row['author']; ?></td>
-                                <td><?php echo $row['sup_id']; ?></td>
-                                <td><?php echo $row['sup_date']; ?></td>
-                                <td>
-                                    <a href="?do=Edit&bookid=<?php echo $row['book_id'];?>" class="btn" style="background-color: #4eb67f; margin-bottom: 5px">Edit</a>
-                                    <a href="?do=Delete&bookid=<?php echo $row['book_id'];?>" class="btn confirm" style="background-color: #ff6a00">Delete</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+
+                        if($stmt->rowCount() > 0) {
+                            $rows = $stmt->fetchAll();
+                            foreach($rows as $row): ?>
+                                <tr >
+                                    <td><?php echo $row['book_id']; ?></td>
+                                    <td><?php echo substr($row['prod_name'], 0, 50); ?></td>
+                                    <td>$<?php echo $row['price']; ?></td>
+                                    <td><?php echo $row['language']; ?></td>
+                                    <td><?php echo $row['size']; ?>MB</td>
+                                    <?php
+                                        $stmt_cat = $conn->prepare("SELECT category_name FROM categories WHERE book_id = ?");
+                                        $stmt_cat->execute(array($row['book_id']));
+                                        $cat_rows = $stmt_cat->fetchAll();
+                                        echo "<td>";
+                                        foreach ($cat_rows as $cat_row):
+                                            echo $cat_row['category_name'] . ' '; 
+                                        endforeach;
+                                        echo "</td>";
+                                    ?>
+                                    <td><?php echo $row['pages']; ?></td>
+                                    <td><?php echo $row['author']; ?></td>
+                                    <td><?php echo $row['sup_id']; ?></td>
+                                    <td><?php echo $row['sup_date']; ?></td>
+                                    <td>
+                                        <a href="?do=Edit&bookid=<?php echo $row['book_id'];?>" class="btn" style="background-color: #4eb67f; margin-bottom: 5px">Edit</a>
+                                        <a href="?do=Delete&bookid=<?php echo $row['book_id'];?>" class="btn confirm" style="background-color: #ff6a00">Delete</a>
+                                    </td>
+                                </tr>
+                            <?php endforeach;
+                        }
+                        else {
+                            echo "<div class='container text-center alert alert-info'> There is no book.....!</div>";
+                        }
+                        ?>
                     </table>
                 </div>               
             </div>
@@ -159,16 +184,16 @@
                         $insert = $conn->prepare("INSERT INTO product_images(prod_id, url) VALUES (?, ?)");
                         $insert->execute(array($row_2, $rand_name));
                     }
+                    echo "<script>
+                        alert('" . $stmt_prod->rowcount() . " RECORD INSERTED...!');
+                        window.open('books.php', '_self');
+                        </script>";
 
-                    $success = "<div class='alert alert-success'>" . $stmt_prod->rowcount() . " RECORD INSERTED...! </div>";
                 }
             endif;
             ?>
             <h1 class="text-center" style="color: #ff6a00; font-weight: bold;">Add BOOK</h1>
             <div class="container">
-                <?php
-                    if(isset($success)) echo $success;
-                ?>
             </div>
             <form class="content" action="?do=Add" method="POST" enctype="multipart/form-data">
                 <div class="container">
@@ -389,16 +414,14 @@
                             $insert->execute(array($book_id, $rand_name));
                         }
 
-                        $success = "<div class='alert alert-success'> THE RECORD UPDATE...! </div>";
+                        echo "<script>
+                            alert(' RECORD UPDATE...!');
+                            window.open('books.php', '_self');
+                            </script>";
                     }
                 endif;
             ?>
                 <h1 class="text-center" style="color: #ff6a00; font-weight: bold;">Edit BOOK</h1>
-                <div class="container">
-                    <?php
-                        if(isset($success)) echo $success;
-                    ?>
-                </div>
                 <form class="content" action="?do=Edit&bookid=<?php echo $bookId ?>" method="POST" enctype="multipart/form-data">
                     <div class="container">
                         <div class="about-book">
@@ -492,7 +515,10 @@
 
             <?php 
             else:
-                redirectToHome("<div class='alert alert-danger'>THE BOOK NOT FOUND</div>", 'back');
+                echo "<script>
+                    alert('THE BOOK NOT FOUND');
+                    window.open('books.php', '_self');
+                    </script>";
             endif;
             ?>
         <?php
@@ -514,7 +540,10 @@
             $stmt3 = $conn->prepare("DELETE FROM products WHERE prod_id = ?");
             $stmt3->execute(array($bookId));
 
-            redirectToHome("<div class='alert alert-success'>" . $stmt3->rowcount() . ' RECORD DELETED...! </div>', 'back');
+            echo "<script>
+                alert('" . $stmt3->rowcount() . " RECORD DELETED...!');
+                window.open('books.php', '_self');
+                </script>";
         }
 
 

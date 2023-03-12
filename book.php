@@ -16,11 +16,11 @@
             $quantity = $_POST['quantity'];
             $price = $_POST['price'];
 
-            $stmt = $conn->prepare("SELECT * FROM orders WHERE user_id = ? AND status = ?");
-            $stmt->execute(array($_SESSION['USER_ID'], 'ordered'));
+            $stmt_order = $conn->prepare("SELECT * FROM orders WHERE user_id = ? AND status = ?");
+            $stmt_order->execute(array($_SESSION['USER_ID'], 'ordered'));
 
-            if ($stmt->rowCount() > 0):
-                $order = $stmt->fetch();
+            if ($stmt_order->rowCount() > 0):
+                $order = $stmt_order->fetch();
 
                 $stmt_item = $conn->prepare("SELECT * FROM order_items WHERE prod_id = ? AND order_id = ?");
                 $stmt_item->execute(array($bookId, $order['order_id']));
@@ -38,24 +38,29 @@
 
 
             else:
-                $stmt_order = $conn->prepare("INSERT INTO orders(user_id, status) VALUES(?, ?)");
-                $stmt_order->execute(array($_SESSION['USER_ID'], 'ordered'));
+                $stmt_order2 = $conn->prepare("INSERT INTO orders(user_id, status) VALUES(?, ?)");
+                $stmt_order2->execute(array($_SESSION['USER_ID'], 'ordered'));
 
                 $stmt_id = $conn->prepare("SELECT MAX(order_id) FROM orders");
                 $stmt_id->execute();
                 $col = $stmt_id->fetchColumn();
+
 
                 $stmt_p = $conn->prepare("UPDATE products SET buying = buying + 1 WHERE prod_id = ?");
                 $stmt_p->execute(array($bookId));
 
                 $stmt_ins = $conn->prepare("INSERT INTO order_items(order_id, prod_id, quantity, total_price) VALUES(?, ?, ?, ?)");
                 $stmt_ins->execute(array($col, $bookId, $quantity, ($quantity * $price)));
-                $success = 'THE ITEM ADD SUCESSFULY';
+                $success = 'THE ITEM ADD SUCCESSFULLY';
             endif;
     }
 
-    $stmt_view = $conn->prepare("SELECT * FROM list WHERE user_id = ? AND prod_id = ?");
-    $stmt_view->execute(array($_SESSION['USER_ID'], $bookId));
+    
+
+    if(isset($_SESSION['USER_NAME'])) {
+        $stmt_view = $conn->prepare("SELECT * FROM list WHERE user_id = ? AND prod_id = ?");
+        $stmt_view->execute(array($_SESSION['USER_ID'], $bookId));
+    }
 
     if (isset($_POST['AddList'])) {
         if ($stmt_view->fetch() == 0):
@@ -95,7 +100,7 @@
                 <i class="fa-solid fa-cart-shopping"></i>
                 <span>$<?php echo $row['price'] ?></span>
             </div>
-            <form action="book.php?bookid=<?php echo $bookId; ?>" method="POST">
+            <form action="book.php?bookid=<?php echo $row['prod_id']; ?>" method="POST">
                 <input class="form-control" style="width: 30%; margin: 10px auto" type="number" name="quantity" value="1">
                 <input type="hidden" name="price" value="<?php echo $row['price']; ?>">
                 <input class="btn" style="width: 70%; background-color: var(--third-color) " type="submit" name="item" value="Add" >
@@ -161,9 +166,15 @@
                         <p><?php echo $row['desc1'] ?></p>
 
                         <p><?php echo $row['desc2'] ?></p>
-                        <p id="about"><?php echo $row['desc3'] ?></p>
-                        <span id="more">-------More-------</span>
-                        <span id="less">-------Less-------</span>
+                        
+                        <?php
+                        if(!empty($row['desc3'])) { ?>
+                            <p id="about"><?php echo $row['desc3'] ?></p>
+                            <span id="more">-------More-------</span>
+                            <span id="less">-------Less-------</span>
+                        <?php
+                        }
+                        ?>
                     </div>
 
                     <div class="data">
